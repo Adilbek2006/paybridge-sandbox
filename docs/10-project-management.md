@@ -6,7 +6,7 @@
 |---|---|
 | Git repository | `https://github.com/Adilbek2006/paybridge-sandbox` |
 | Submitted version (probation period 1) | tag `prob-period-1` → `https://github.com/Adilbek2006/paybridge-sandbox/tree/prob-period-1` |
-| YouTrack project | `https://<UNIVERSITY>.youtrack.cloud/projects/DIP` (agile board "PayBridge") |
+| YouTrack project | `https://paybridge-se2406.youtrack.cloud/projects/DIP` (agile board "PayBridge") |
 | Backlog source (importable) | `project/youtrack-tasks.csv` |
 | Git workflow rules | `project/git-workflow.md` |
 
@@ -31,7 +31,7 @@ The allocation was revised compared with the initial project application ("Adilb
 frontend and reports; Nurbol — backend and microservices"). In an API-centric project the
 backend is the core, so both students now own a substantial and separately assessable part
 of the backend, and documentation is split evenly. Planned effort is balanced
-(≈113 h vs ≈110 h in the current backlog).
+(≈115 h vs ≈112 h in the current backlog).
 
 | Area | Responsible (R) | Reviewer |
 |---|---|---|
