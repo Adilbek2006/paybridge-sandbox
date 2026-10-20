@@ -1,0 +1,29 @@
+@startuml system-context
+title PayBridge — System Context Diagram
+skinparam defaultFontName DejaVu Sans
+skinparam rectangle {
+  RoundCorner 12
+}
+skinparam shadowing false
+left to right direction
+
+actor "Merchant developer\n(client system)" as Dev
+actor "Customer (payer)" as Payer
+actor "Administrator" as Admin
+
+rectangle "**PayBridge**\nREST API service for payment\nsystem integration (sandbox)\n\nunified payments API · idempotency ·\nwebhook verification · signed\noutbound notifications · dashboard" as PB #E6F2F2
+
+rectangle "Stripe\n(test mode)" as Stripe #F2F2F2
+rectangle "PayPal\n(sandbox)" as PayPal #F2F2F2
+rectangle "Merchant webhook\nendpoint" as Hook #F2F2F2
+
+Dev --> PB : REST/JSON over HTTPS\n(API key, Idempotency-Key)
+Admin --> PB : Web dashboard\n(HTTPS)
+PB --> Stripe : REST API calls\n(create/refund/retrieve)
+PB --> PayPal : REST API calls\n(orders/capture/refund)
+Stripe --> PB : Webhooks\n(Stripe-Signature)
+PayPal --> PB : Webhooks\n(PayPal signature headers)
+PB --> Hook : Signed notifications\n(PayBridge-Signature, retries)
+Payer --> Stripe : Pays on hosted\ncheckout page
+Payer --> PayPal : Approves on hosted\napproval page
+@enduml
