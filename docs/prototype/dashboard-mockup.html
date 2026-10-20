@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8"><title>PayBridge admin mockup</title>
+<style>
+body{margin:0;font-family:DejaVu Sans,Arial,sans-serif;background:#f4f6f7;color:#1d2a30;font-size:13px}
+header{background:#0f5257;color:#fff;padding:12px 20px;display:flex;justify-content:space-between}
+nav a{color:#cfe7e8;margin-left:16px;text-decoration:none}nav a.on{color:#fff;font-weight:bold}
+main{padding:18px 20px}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.k{background:#fff;border:1px solid #d8e0e2;border-radius:8px;padding:10px 12px}.k b{display:block;font-size:20px;margin-top:4px}
+.f{display:flex;gap:8px;margin-bottom:10px}.f span{background:#fff;border:1px solid #c9d3d6;border-radius:6px;padding:5px 10px}
+.grid{display:grid;grid-template-columns:1.6fr 1fr;gap:14px}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #d8e0e2}
+th,td{padding:7px 9px;border-bottom:1px solid #eef1f2;text-align:left}th{background:#eef3f4;font-weight:600}
+.s{padding:2px 8px;border-radius:10px;font-size:11px}.ok{background:#d9f2e3;color:#16643a}.fail{background:#fbe0e0;color:#8f1d1d}.proc{background:#fff2cc;color:#7a5a00}.ref{background:#e3e7fb;color:#2c3b8f}
+.card{background:#fff;border:1px solid #d8e0e2;border-radius:8px;padding:12px}
+.tl div{border-left:3px solid #0f5257;padding:2px 0 8px 10px;margin-left:4px}
+.btn{display:inline-block;background:#0f5257;color:#fff;border-radius:6px;padding:5px 10px;margin-top:6px}
+.note{color:#6b7b80;font-size:11px;margin-top:10px}
+</style></head><body>
+<header><b>PayBridge · Sandbox admin</b><nav><a class="on">Payments</a><a>Webhook deliveries</a><a>Reports</a><a>Merchants</a></nav></header>
+<main>
+<div class="kpis"><div class="k">Payments today<b>128</b></div><div class="k">Succeeded<b>91.4%</b></div><div class="k">Deliveries pending retry<b>3</b></div><div class="k">Failed deliveries<b>1</b></div></div>
+<div class="f"><span>Status: all ▾</span><span>Provider: all ▾</span><span>20.10.2026 – 20.10.2026</span><span>Export CSV ⤓</span></div>
+<div class="grid">
+<table><tr><th>Payment ID</th><th>Provider</th><th>Amount</th><th>Status</th><th>Created</th></tr>
+<tr><td>pay_E6NM1O…RDOT</td><td>stripe</td><td>1 500.00 KZT</td><td><span class="s ref">partially_refunded</span></td><td>10:15</td></tr>
+<tr><td>pay_OW238O…R3AW</td><td>mock</td><td>50.00 USD</td><td><span class="s fail">failed</span></td><td>10:12</td></tr>
+<tr><td>pay_7KQ2ZX…M1PL</td><td>paypal</td><td>25.00 USD</td><td><span class="s proc">processing</span></td><td>10:09</td></tr>
+<tr><td>pay_3VB8TT…Q0CE</td><td>stripe</td><td>9 990.00 KZT</td><td><span class="s ok">succeeded</span></td><td>10:02</td></tr>
+<tr><td>pay_Z0Y9WA…7HHN</td><td>mock</td><td>1.00 EUR</td><td><span class="s ok">succeeded</span></td><td>09:58</td></tr>
+</table>
+<div class="card"><b>pay_E6NM1O…RDOT</b> · Order #1042<div class="tl" style="margin-top:8px">
+<div>10:15:00 requires_action <small>(api)</small></div><div>10:16:40 processing <small>(stripe webhook evt_…)</small></div><div>10:16:42 succeeded <small>(stripe webhook, signature ✓)</small></div><div>10:30:05 partially_refunded −500.00 KZT <small>(api)</small></div></div>
+<b>Deliveries to merchant</b><br>payment.succeeded → 503 (attempt 1), 200 (attempt 2, 184 ms)<br>
+<span class="btn">Resend event</span></div>
+</div>
+<div class="note">Low-fidelity mockup (FR-16, FR-17). Data is illustrative.</div>
+</main></body></html>

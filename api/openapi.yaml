@@ -1,0 +1,380 @@
+openapi: 3.1.0
+info:
+  title: PayBridge Sandbox API
+  version: 0.1.0
+  summary: Unified REST API for payment system integration (sandbox environment)
+  description: |
+    Design-first contract for PayBridge (probation period 1).
+    All amounts are integers in minor currency units (e.g. 150000 = 1 500.00 KZT).
+    All POST requests require an `Idempotency-Key` header.
+    Errors follow RFC 9457 (application/problem+json).
+servers:
+  - url: http://localhost:8000
+    description: Local sandbox (docker compose)
+security:
+  - ApiKey: []
+tags:
+  - name: Payments
+  - name: Refunds
+  - name: Webhook endpoints
+  - name: Provider webhooks
+  - name: System
+paths:
+  /v1/payments:
+    post:
+      tags: [Payments]
+      operationId: createPayment
+      summary: Create a payment (FR-03, FR-07, FR-08)
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreatePaymentRequest' }
+            examples:
+              stripe:
+                value:
+                  amount: 150000
+                  currency: KZT
+                  provider: stripe
+                  description: Order #1042
+                  return_url: https://shop.example/checkout/return
+                  metadata: { order_id: "1042" }
+              mockDecline:
+                value:
+                  amount: 5000
+                  currency: USD
+                  provider: mock
+                  description: QA decline scenario
+                  return_url: https://shop.example/checkout/return
+                  mock_scenario: decline
+      responses:
+        '201':
+          description: Payment created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Payment' }
+              example:
+                id: pay_01JB7Z6Q2M8Y4V9K3T5R1N0XWA
+                object: payment
+                status: requires_action
+                amount: 150000
+                currency: KZT
+                amount_refunded: 0
+                provider: stripe
+                provider_payment_id: cs_test_a1B2c3D4
+                checkout_url: https://checkout.stripe.com/c/pay/cs_test_a1B2c3D4
+                description: Order #1042
+                metadata: { order_id: "1042" }
+                created_at: '2026-10-20T10:15:00Z'
+                updated_at: '2026-10-20T10:15:00Z'
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/ProviderError' }
+    get:
+      tags: [Payments]
+      operationId: listPayments
+      summary: List payments with filters and cursor pagination (FR-05)
+      parameters:
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/PaymentStatus' } }
+        - { name: provider, in: query, schema: { $ref: '#/components/schemas/Provider' } }
+        - { name: created_from, in: query, schema: { type: string, format: date-time } }
+        - { name: created_to, in: query, schema: { type: string, format: date-time } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 20 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Page of payments
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, next_cursor]
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Payment' } }
+                  next_cursor: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /v1/payments/{payment_id}:
+    get:
+      tags: [Payments]
+      operationId: getPayment
+      summary: Get a payment with its status history (FR-04)
+      parameters: [ { $ref: '#/components/parameters/PaymentId' } ]
+      responses:
+        '200':
+          description: Payment
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PaymentWithHistory' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /v1/payments/{payment_id}/cancel:
+    post:
+      tags: [Payments]
+      operationId: cancelPayment
+      summary: Cancel a payment that has not succeeded (FR-06)
+      parameters:
+        - { $ref: '#/components/parameters/PaymentId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      responses:
+        '200':
+          description: Canceled payment
+          content: { application/json: { schema: { $ref: '#/components/schemas/Payment' } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /v1/payments/{payment_id}/refunds:
+    post:
+      tags: [Refunds]
+      operationId: createRefund
+      summary: Full or partial refund (FR-14)
+      parameters:
+        - { $ref: '#/components/parameters/PaymentId' }
+        - { $ref: '#/components/parameters/IdempotencyKey' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                amount:
+                  type: integer
+                  minimum: 1
+                  description: Amount to refund in minor units; omit for the full remaining amount
+                reason: { type: string, maxLength: 200 }
+            example: { amount: 50000, reason: requested_by_customer }
+      responses:
+        '201':
+          description: Refund created
+          content: { application/json: { schema: { $ref: '#/components/schemas/Refund' } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /v1/webhook-endpoints:
+    post:
+      tags: [Webhook endpoints]
+      operationId: createWebhookEndpoint
+      summary: Register the merchant's notification URL (FR-12)
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url]
+              properties:
+                url: { type: string, format: uri, description: Must be https and resolve to a public IP (SSRF protection) }
+                events:
+                  type: array
+                  items: { $ref: '#/components/schemas/EventType' }
+            example: { url: https://shop.example/paybridge/webhook, events: [payment.succeeded, payment.failed, payment.refunded] }
+      responses:
+        '201':
+          description: Endpoint registered. The signing secret is returned only once.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  url: { type: string }
+                  signing_secret: { type: string, example: whsec_pb_3f9c1e0d7a5b }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /webhooks/{provider}:
+    post:
+      tags: [Provider webhooks]
+      operationId: receiveProviderWebhook
+      summary: Inbound webhook from Stripe or PayPal (FR-10, FR-11)
+      security: []
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { type: string, enum: [stripe, paypal, mock] }
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object } } }
+      responses:
+        '200': { description: Event accepted (or duplicate ignored) }
+        '400': { description: Signature verification failed }
+  /health:
+    get:
+      tags: [System]
+      operationId: health
+      security: []
+      responses:
+        '200': { description: Process is alive }
+  /ready:
+    get:
+      tags: [System]
+      operationId: ready
+      security: []
+      responses:
+        '200': { description: Database reachable }
+        '503': { description: Database unreachable }
+webhooks:
+  paymentEvent:
+    post:
+      summary: Notification sent by PayBridge to the merchant endpoint (FR-12, FR-13)
+      description: |
+        Header `PayBridge-Signature: t=<unix_ts>,v1=<hex HMAC-SHA256(secret, "<t>.<raw_body>")>`.
+        Delivery is at-least-once; de-duplicate by `id`. Respond 2xx within 10 s.
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Event' }
+            example:
+              id: evt_01JB7ZB4F0S8Q6M2W1X3Y5Z7AB
+              type: payment.succeeded
+              created_at: '2026-10-20T10:16:42Z'
+              data:
+                payment:
+                  id: pay_01JB7Z6Q2M8Y4V9K3T5R1N0XWA
+                  status: succeeded
+                  amount: 150000
+                  currency: KZT
+                  provider: stripe
+                  metadata: { order_id: "1042" }
+      responses:
+        '200': { description: Received }
+components:
+  securitySchemes:
+    ApiKey:
+      type: http
+      scheme: bearer
+      description: Test API key, e.g. `pb_test_...`
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 255 }
+      description: Unique key per logical operation (UUID v4 recommended). Kept for 24 h.
+    PaymentId:
+      name: payment_id
+      in: path
+      required: true
+      schema: { type: string, pattern: '^pay_[0-9A-Z]{26}$' }
+  schemas:
+    Provider: { type: string, enum: [stripe, paypal, mock] }
+    PaymentStatus:
+      type: string
+      enum: [requires_action, processing, succeeded, failed, canceled, partially_refunded, refunded]
+    EventType:
+      type: string
+      enum: [payment.processing, payment.succeeded, payment.failed, payment.canceled, payment.refunded, payment.partially_refunded]
+    CreatePaymentRequest:
+      type: object
+      required: [amount, currency, return_url]
+      properties:
+        amount: { type: integer, minimum: 1, maximum: 100000000 }
+        currency: { type: string, enum: [KZT, USD, EUR] }
+        provider: { $ref: '#/components/schemas/Provider' }
+        description: { type: string, maxLength: 200 }
+        return_url: { type: string, format: uri }
+        metadata:
+          type: object
+          maxProperties: 20
+          additionalProperties: { type: string, maxLength: 500 }
+        mock_scenario:
+          type: string
+          enum: [success, decline, timeout, delayed_success, duplicate_webhook]
+          description: Only for provider=mock (FR-09)
+    Payment:
+      type: object
+      required: [id, object, status, amount, currency, amount_refunded, provider, created_at, updated_at]
+      properties:
+        id: { type: string }
+        object: { type: string, const: payment }
+        status: { $ref: '#/components/schemas/PaymentStatus' }
+        amount: { type: integer }
+        currency: { type: string }
+        amount_refunded: { type: integer }
+        provider: { $ref: '#/components/schemas/Provider' }
+        provider_payment_id: { type: [string, 'null'] }
+        checkout_url: { type: [string, 'null'], format: uri }
+        description: { type: [string, 'null'] }
+        metadata: { type: object, additionalProperties: { type: string } }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    PaymentWithHistory:
+      allOf:
+        - $ref: '#/components/schemas/Payment'
+        - type: object
+          properties:
+            status_history:
+              type: array
+              items:
+                type: object
+                properties:
+                  from_status: { type: [string, 'null'] }
+                  to_status: { type: string }
+                  source: { type: string, enum: [api, provider_webhook, reconciliation, admin] }
+                  at: { type: string, format: date-time }
+    Refund:
+      type: object
+      properties:
+        id: { type: string }
+        payment_id: { type: string }
+        amount: { type: integer }
+        status: { type: string, enum: [pending, succeeded, failed] }
+        created_at: { type: string, format: date-time }
+    Event:
+      type: object
+      required: [id, type, created_at, data]
+      properties:
+        id: { type: string }
+        type: { $ref: '#/components/schemas/EventType' }
+        created_at: { type: string, format: date-time }
+        data:
+          type: object
+          properties:
+            payment: { $ref: '#/components/schemas/Payment' }
+    Problem:
+      type: object
+      description: RFC 9457 Problem Details
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }
+  responses:
+    Unauthorized:
+      description: Missing or invalid API key
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: 'https://paybridge.dev/errors/unauthorized', title: Unauthorized, status: 401, detail: Missing or invalid API key }
+    NotFound:
+      description: Resource not found (or belongs to another merchant)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Conflict:
+      description: Illegal state transition or idempotent request still in progress
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: 'https://paybridge.dev/errors/invalid-transition', title: Invalid state transition, status: 409, detail: Payment pay_01JB… is succeeded and cannot be canceled }
+    ValidationError:
+      description: Invalid request, or Idempotency-Key reused with a different body
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          example: { type: 'https://paybridge.dev/errors/idempotency-key-reused', title: Idempotency key reused with different parameters, status: 422, detail: The key 'a3f1…' was used for a request with a different body }
+    ProviderError:
+      description: The payment provider returned an error or timed out
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
