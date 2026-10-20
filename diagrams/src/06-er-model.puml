@@ -1,0 +1,110 @@
+@startuml er-model
+title Data model (draft)
+skinparam defaultFontName DejaVu Sans
+skinparam shadowing false
+hide circle
+entity merchants {
+  *id : uuid
+  --
+  name : text
+  default_provider : text
+  webhook_url : text
+  webhook_secret_enc : text (encrypted)
+  created_at : timestamptz
+}
+entity api_keys {
+  *id : uuid
+  --
+  merchant_id : uuid <<FK>>
+  key_hash : text <<unique>>
+  prefix : text
+  revoked_at : timestamptz
+}
+entity payments {
+  *id : uuid
+  --
+  merchant_id : uuid <<FK>>
+  provider : text
+  provider_payment_id : text
+  amount : bigint (minor units)
+  currency : char(3)
+  status : text
+  amount_refunded : bigint
+  metadata : jsonb
+  created_at / updated_at
+}
+entity refunds {
+  *id : uuid
+  --
+  payment_id : uuid <<FK>>
+  amount : bigint
+  status : text
+  provider_refund_id : text
+}
+entity status_history {
+  *id : bigserial
+  --
+  payment_id : uuid <<FK>>
+  from_status : text
+  to_status : text
+  source : text
+  created_at
+}
+entity idempotency_keys {
+  *merchant_id + key <<PK>>
+  --
+  request_hash : text
+  response_code : int
+  response_body : jsonb
+  state : text
+  expires_at
+}
+entity provider_events {
+  *provider + event_id <<PK>>
+  --
+  payment_id : uuid
+  type : text
+  payload : jsonb
+  verified : bool
+  received_at
+}
+entity outbox_events {
+  *id : uuid
+  --
+  merchant_id : uuid
+  payment_id : uuid
+  type : text
+  payload : jsonb
+  status : text
+  attempts : int
+  next_attempt_at
+}
+entity delivery_attempts {
+  *id : bigserial
+  --
+  outbox_event_id : uuid <<FK>>
+  http_status : int
+  latency_ms : int
+  error : text
+  created_at
+}
+entity audit_log {
+  *id : bigserial
+  --
+  merchant_id : uuid
+  actor : text
+  action : text
+  entity_type / entity_id
+  details : jsonb
+  created_at
+}
+merchants ||--o{ api_keys
+merchants ||--o{ audit_log
+merchants ||--o{ payments
+payments ||--o{ refunds
+payments ||--o{ status_history
+merchants ||--o{ idempotency_keys
+payments ||--o{ provider_events
+payments ||--o{ outbox_events
+outbox_events ||--o{ delivery_attempts
+@enduml

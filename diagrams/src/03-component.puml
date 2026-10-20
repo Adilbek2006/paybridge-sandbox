@@ -1,0 +1,64 @@
+@startuml component
+title PayBridge — Component Diagram (draft)
+skinparam defaultFontName DejaVu Sans
+skinparam shadowing false
+skinparam componentStyle rectangle
+
+actor "Client system" as Client
+actor "Administrator" as Admin
+node "Stripe API (test)" as StripeAPI
+node "PayPal API (sandbox)" as PayPalAPI
+node "Merchant webhook endpoint" as MerchantHook
+
+package "API process (FastAPI)" {
+  [Auth & API keys\n(Adilbek)] as Auth
+  [Idempotency middleware\n(Adilbek)] as Idem
+  [Payments module:\nservice + state machine\n(Adilbek)] as Payments
+  [Refunds\n(Adilbek)] as Refunds
+  [Admin dashboard & reports\nJinja2 + HTMX (Adilbek)] as Dashboard
+  [Webhook ingest:\nsignature verification,\nnormalisation (Nurbol)] as Ingest
+  interface "PaymentProvider" as IProv
+  [Stripe adapter\n(Adilbek)] as StripeA
+  [PayPal adapter\n(Nurbol)] as PayPalA
+  [Mock provider\n(Nurbol)] as MockA
+}
+
+package "Worker process" {
+  [Outbox dispatcher:\nsigning, retries, back-off\n(Nurbol)] as Dispatcher
+  [Reconciliation job\n(Nurbol, Could)] as Recon
+}
+
+database "PostgreSQL" {
+  [merchants, api_keys] as T1
+  [payments, refunds,\nstatus_history, audit_log] as T2
+  [idempotency_keys] as T3
+  [provider_events] as T4
+  [outbox_events,\ndelivery_attempts] as T5
+}
+
+Client --> Auth : HTTPS /v1/*
+Auth --> Idem
+Idem --> Payments
+Idem --> Refunds
+Payments --> IProv
+Refunds --> IProv
+IProv <|.. StripeA
+IProv <|.. PayPalA
+IProv <|.. MockA
+StripeA --> StripeAPI
+PayPalA --> PayPalAPI
+StripeAPI --> Ingest : webhook
+PayPalAPI --> Ingest : webhook
+MockA ..> Ingest : simulated webhook
+Ingest --> Payments : apply transition
+Admin --> Dashboard
+Dashboard --> Payments
+Auth --> T1
+Idem --> T3
+Payments --> T2
+Payments --> T5 : write event in\nsame transaction
+Ingest --> T4
+Dispatcher --> T5 : SELECT … FOR UPDATE\nSKIP LOCKED
+Dispatcher --> MerchantHook : POST signed event
+Recon --> IProv
+@enduml

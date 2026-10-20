@@ -1,0 +1,18 @@
+@startuml payment-state
+title Unified payment state machine
+skinparam defaultFontName DejaVu Sans
+skinparam shadowing false
+[*] --> requires_action : POST /v1/payments
+requires_action --> processing : payer completed checkout
+requires_action --> canceled : POST …/cancel
+requires_action --> failed : provider declined / expired
+processing --> succeeded : provider confirmed
+processing --> failed : provider failed
+succeeded --> partially_refunded : partial refund
+succeeded --> refunded : full refund
+partially_refunded --> refunded : remaining refunded
+partially_refunded --> partially_refunded : another partial refund
+canceled --> [*]
+failed --> [*]
+refunded --> [*]
+@enduml

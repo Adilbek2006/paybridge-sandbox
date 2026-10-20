@@ -1,0 +1,37 @@
+@startuml sequence-create-payment
+title Scenario: create payment → provider webhook → merchant notification
+skinparam defaultFontName DejaVu Sans
+skinparam shadowing false
+autonumber
+participant "Client system" as C
+participant "PayBridge API" as API
+database "PostgreSQL" as DB
+participant "Provider adapter" as A
+participant "Stripe / PayPal" as P
+participant "Worker" as W
+participant "Merchant webhook\nendpoint" as M
+
+C -> API : POST /v1/payments\nIdempotency-Key: K
+API -> DB : INSERT idempotency_keys(K) ON CONFLICT
+alt key already completed
+  API --> C : stored response (same body)
+else new key
+  API -> A : create_payment(request)
+  A -> P : create checkout / order
+  P --> A : provider id, checkout URL
+  API -> DB : BEGIN; insert payment(requires_action);\nstore response for K; COMMIT
+  API --> C : 201 {id, status, checkout_url}
+end
+... payer pays on hosted page ...
+P -> API : webhook (signed)
+API -> API : verify signature + timestamp
+API -> DB : BEGIN; insert provider_event (unique event id);\nupdate payment → succeeded; insert outbox_event; COMMIT
+API --> P : 200
+W -> DB : SELECT pending outbox FOR UPDATE SKIP LOCKED
+W -> M : POST payment.succeeded\nPayBridge-Signature: t=…,v1=…
+alt 2xx
+  W -> DB : mark delivered
+else error / timeout
+  W -> DB : record attempt, schedule retry (back-off)
+end
+@enduml
