@@ -14,7 +14,7 @@ with the team's decision and a link to the resulting change.
 
 | # | Deliverable | Supervisor's comment | Decision | Resulting change | YouTrack |
 |---|---|---|---|---|---|
-| 1 | Materials for the first submission (meeting 1) | No remarks were given. | The team continues with the plan in Section 10. | None required | DIP-15 |
+| 1 | Materials for the first submission (meeting 1) | "All points accepted. At this moment all done properly." | Accepted. The team continues with the plan in Section 10; the next review is at Milestone 1 (21.11.2026). | None required | DIP-15 |
 
 Further comments from the next review meetings and from PR reviews will be added to this
 table.
