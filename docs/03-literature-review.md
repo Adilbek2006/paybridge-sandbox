@@ -1,4 +1,4 @@
-﻿# 3. Literature Review
+# 3. Literature Review
 
 ## 3.1 Method
 

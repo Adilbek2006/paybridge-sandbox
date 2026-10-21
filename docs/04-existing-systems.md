@@ -1,4 +1,4 @@
-﻿# 4. Analysis of Existing Systems
+# 4. Analysis of Existing Systems
 
 ## 4.1 Method
 
@@ -12,7 +12,8 @@ Stripe — cloud payment platform with REST API, excellent documentation and tes
 Handles idempotency, webhooks and retries internally but requires Stripe-hosted infrastructure.
 
 PayPal — global payment platform with REST API and sandbox environment.
-Supports standard payment flows but webhook reliability is lower than Stripe.
+Supports standard payment flows; webhooks use a different, certificate-based
+signature scheme and a different retry policy than Stripe [G3].
 
 Hyperswitch — open-source payment orchestration layer (Juspay, 2023).
 Supports 50+ connectors but is complex to self-host for a small team.

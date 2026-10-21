@@ -1,4 +1,3 @@
-@"
 # 1. Project Proposal
 
 ## 1.1 Project title
@@ -23,6 +22,7 @@ mock provider for automated testing without network calls.
 ## 1.4 Scope
 
 In scope:
+
 - Unified REST API for initiating payments, refunds and cancellations
 - Idempotency-Key support on all state-changing endpoints
 - Outbound webhook delivery with HMAC-SHA256 signatures and automatic retries
@@ -32,6 +32,7 @@ In scope:
 - OpenAPI 3.1 specification
 
 Out of scope:
+
 - Production deployment and real money processing
 - Card data storage (PCI DSS scope is avoided by using provider-hosted pages)
 - Kazakhstani local PSP adapters (planned for future work)
@@ -42,4 +43,3 @@ Out of scope:
 2. OpenAPI specification covering all endpoints
 3. Verified integration with Stripe test mode and PayPal sandbox
 4. Load test results showing baseline performance metrics
-"@ | Out-File -FilePath docs/01-proposal.md -Encoding utf8
