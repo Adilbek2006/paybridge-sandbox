@@ -1,4 +1,4 @@
-﻿# 5. Technology Comparison
+# 5. Technology Comparison
 
 ## 5.1 Decision 1 — Server platform
 
@@ -12,7 +12,7 @@ Options considered: Python/FastAPI, Node.js/Express, Go/Gin, Java/Spring Boot.
 | Team familiarity | High | Medium | Low | Low |
 | Ecosystem for payments | Good | Good | Limited | Good |
 
-Decision: Python + FastAPI. Fastest to prototype, built-in OpenAPI generation,
+Decision: Python + FastAPI (ADR-002). Fastest to prototype, built-in OpenAPI generation,
 good ecosystem. Sufficient performance for sandbox load.
 
 ## 5.2 Decision 2 — Data storage
@@ -26,10 +26,10 @@ Options: PostgreSQL, MySQL, SQLite, MongoDB.
 | Idempotency constraints | Yes | Yes | Yes | No |
 | Production readiness | High | High | Low | High |
 
-Decision: PostgreSQL 16. Best ACID guarantees, supports unique constraints for
+Decision: PostgreSQL 16 (ADR-002). Best ACID guarantees, supports unique constraints for
 idempotency keys, widely used in payment systems.
 
-## 5.3 Decision 3 — Component interaction (ADR-002)
+## 5.3 Decision 3 — Component interaction (ADR-003)
 
 Options: synchronous HTTP calls, message queue (RabbitMQ/Kafka), transactional outbox.
 

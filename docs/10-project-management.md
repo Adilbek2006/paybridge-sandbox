@@ -89,7 +89,7 @@ the team's internal targets.
 **Completed:** proposal and scope, literature review (13 scientific + 18 technical sources),
 comparison of 4 existing systems, technology comparison (4 decisions), requirements (20 FR,
 8 NFR), architecture with 6 diagrams and 3 ADRs, OpenAPI 3.1 contract, runnable prototype
-(24 passing tests), verification plan, backlog of 35 tasks.
+(24 passing tests), verification plan, backlog of 37 tasks.
 
 **Known limitations:** in-memory storage; only the mock provider is wired; inbound webhooks
 and the delivery worker are designed but not implemented; interview evidence is being
